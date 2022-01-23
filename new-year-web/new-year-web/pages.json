@@ -24,6 +24,15 @@
             }
             
         }
+        ,{
+            "path" : "pages/share/home",
+            "style" :                                                                                    
+            {
+                "navigationStyle": "custom",
+                "enablePullDownRefresh": false
+            }
+            
+        }
     ],
 	// "preloadRule": {
 	// 	"pages/example/components": {

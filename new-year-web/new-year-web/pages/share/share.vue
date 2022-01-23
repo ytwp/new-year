@@ -11,16 +11,39 @@
 		data() {
 			return {
 				ctx: null,
-				img: null
+				img: null,
+				left_ear: {
+					x: 342.8333435058594,
+					y: 0,
+				}
 			}
 		},
 		onLoad() {
 			this.ctx = uni.createCameraContext()
+			const FMS = uni.getFileSystemManager()
 			setInterval(() => {
 				this.ctx.takePhoto({
 					quality: 'high',
 					success: (res) => {
-						console.log(res.tempImagePath)
+						// console.log(res.tempImagePath)
+						FMS.readFile({
+							filePath: res.tempImagePath,
+							encoding: 'base64',
+							success(response) {
+								const picNameR = response.data
+								// console.log(picNameR)
+								uni.$u.http.post('/predict/infer', {
+									img: picNameR
+								}).then(data => {
+									console.log(data)
+									let p = data[0]
+									this.left_ear = p['left_ear']
+									console.log(this.left_ear)
+								}).catch(err => {
+									console.log("err:" + err)
+								})
+							}
+						})
 					}
 				})
 				// console.log(11)
@@ -46,7 +69,7 @@
 
 				// 	}
 				// })
-			}, 1000);
+			}, 5000);
 		},
 		methods: {
 			takePhoto(ctx) {
@@ -87,6 +110,6 @@
 		display: block;
 		width: 100%;
 		height: 100%;
-		z-index: 999;
+		z-index: 899;
 	}
 </style>
