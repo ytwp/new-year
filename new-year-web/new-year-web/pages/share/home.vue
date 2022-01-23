@@ -2,7 +2,7 @@
 	<view>
 		<image class="background_image"
 			src='https://img.yeting.wang/new_year/WechatIMG93215.jpeg?x-oss-process=style/yasuo-30'></image>
-		<view :animation="animationData" style="padding-left: 100rpx;padding-right: 100rpx;padding-top: 500rpx;"
+		<view :animation="animationData" style="padding-left: 100rpx;padding-right: 100rpx;margin-top: 500rpx;"
 			@tap="$u.throttle(rotateAndScale, 2000)">
 			<u-transition :show="show" :mode="mode" duration="1000">
 				<image
@@ -24,6 +24,22 @@
 				</view>
 			</u-transition>
 		</view>
+		<u-modal :show="zhijie_lingqushow" confirmText="我也去发一个" @confirm="goHome">
+			<view class="slot-content">
+				¥ 33.33 领取成功,已存入微信钱包
+			</view>
+		</u-modal>
+		<u-modal :show="zhufuyu_lingqushow" confirmText="确定" @confirm="zhufuyu">
+			<view class="slot-content">
+				<view>新年祝福语红包需填写祝福语</view>️
+				<u--textarea v-model="zhufuyu_value" placeholder="新年祝福语" count maxlength="30"></u--textarea>
+			</view>
+		</u-modal>
+		<u-modal :show="shoushi_lingqushow" confirmText="去拜年" @confirm="goshoushi">
+			<view class="slot-content">
+				拜年手势红包，需作出拜年动作即可领取
+			</view>
+		</u-modal>
 		<u-notify ref="uNotify" message="Hi uView"></u-notify>
 	</view>
 </template>
@@ -32,6 +48,10 @@
 	export default {
 		data() {
 			return {
+				zhijie_lingqushow: false,
+				zhufuyu_lingqushow: false,
+				shoushi_lingqushow: false,
+				zhufuyu_value: "",
 				toast_show: false,
 				show: true,
 				mode: 'zoom',
@@ -64,10 +84,22 @@
 				}.bind(this), 500)
 				setTimeout(() => {
 					clearInterval(this.timer)
-					uni.showToast({
-						title:'领取成功'
-					})
+					this.shoushi_lingqushow = true
 				}, 2000)
+			},
+			goHome() {
+				uni.redirectTo({
+					url: '/pages/index/index'
+				});
+			},
+			goshoushi() {
+				uni.navigateTo({
+					url: '/pages/share/shoushi'
+				})
+			},
+			zhufuyu() {
+				this.zhufuyu_lingqushow = false
+				this.zhijie_lingqushow = true
 			}
 		}
 	}
