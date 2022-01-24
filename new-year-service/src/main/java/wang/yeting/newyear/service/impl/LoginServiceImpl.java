@@ -2,6 +2,7 @@ package wang.yeting.newyear.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -72,8 +73,10 @@ public class LoginServiceImpl extends ServiceImpl<UserMapper, User> implements L
             user = saveUser;
         }
         //更新用户信息
-        BeanUtils.copyProperties(loginVo.getUserInfo(), user);
-        updateById(user);
+        if (StringUtils.isNotEmpty(loginVo.getUserInfo().getNickName())) {
+            BeanUtils.copyProperties(loginVo.getUserInfo(), user);
+            updateById(user);
+        }
         //redis
         BeanUtils.copyProperties(user, loginDto);
         String token = tokenUtils.login(user);
@@ -93,6 +96,18 @@ public class LoginServiceImpl extends ServiceImpl<UserMapper, User> implements L
     public Result<?> exist(UserBo user) {
         LoginDto loginDto = tokenUtils.expire(user);
         return Result.success(loginDto);
+    }
+
+    @Override
+    public Result<?> updateUserInfo(UserBo userBo, LoginVo loginVo) {
+        User user = new User();
+        BeanUtils.copyProperties(loginVo.getUserInfo(), user);
+        user.setUserId(userBo.getUserId());
+        boolean update = updateById(user);
+        if (update) {
+            return exist(userBo);
+        }
+        return Result.exceptionError("完善信息失败");
     }
 
 }

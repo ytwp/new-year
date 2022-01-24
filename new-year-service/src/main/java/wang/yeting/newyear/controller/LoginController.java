@@ -37,4 +37,10 @@ public class LoginController {
         return loginService.exist(user);
     }
 
+    @Permission
+    @PostMapping("/update")
+    public Result<?> update(@CurrentUser UserBo user, @RequestBody LoginVo loginVo) {
+        return loginService.updateUserInfo(user, loginVo);
+    }
+
 }

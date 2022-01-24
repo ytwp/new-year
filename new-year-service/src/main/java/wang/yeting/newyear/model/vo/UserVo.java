@@ -32,5 +32,5 @@ public class UserVo implements Serializable {
     private Integer status;
 
     private Integer page = 1;
-    private Integer pageSize = 10;
+    private Integer size = 10;
 }

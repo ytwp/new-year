@@ -15,4 +15,6 @@ public interface LoginService {
     Result<?> weChatLogin(LoginVo loginVo);
 
     Result<?> exist(UserBo user);
+
+    Result<?> updateUserInfo(UserBo user, LoginVo loginVo);
 }

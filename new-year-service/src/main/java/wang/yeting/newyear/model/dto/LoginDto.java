@@ -19,15 +19,10 @@ public class LoginDto implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private Long inviteCode;
-    private Long parentId;
-
-    private String wxOpenId;
+    private String openId;
     private String nickName;
     private String avatarUrl;
-    private String userSign;
     private String token;
-    private Integer userType;
     private Integer status;
     private Boolean newUser = false;
 }
