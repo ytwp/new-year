@@ -19,7 +19,7 @@ import wang.yeting.newyear.service.UserService;
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
     @Override
-    public UserDto getDto(Long userId) {
+    public UserDto getDto(String userId) {
         User user = getById(userId);
         if (user == null) {
             return null;
@@ -30,7 +30,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    public User getByUserId(Long userId) {
+    public User getByUserId(String userId) {
         return getOne(new LambdaQueryWrapper<User>()
                 .eq(User::getUserId, userId)
         );

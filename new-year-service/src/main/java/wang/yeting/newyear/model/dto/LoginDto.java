@@ -19,6 +19,7 @@ public class LoginDto implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    private String userId;
     private String openId;
     private String nickName;
     private String avatarUrl;

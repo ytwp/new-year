@@ -14,8 +14,8 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class RedPacketShareDto {
 
-    private Long redPacketId;
-    private Long userId;
+    private String redPacketId;
+    private String userId;
     private String nickName;
     private Integer redPacketType;
     private Integer receivingMethod;

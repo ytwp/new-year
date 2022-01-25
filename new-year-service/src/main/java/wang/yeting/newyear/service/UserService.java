@@ -12,8 +12,8 @@ import wang.yeting.newyear.model.po.User;
 
 public interface UserService extends IService<User> {
 
-    UserDto getDto(Long userId);
+    UserDto getDto(String userId);
 
-    User getByUserId(Long userId);
+    User getByUserId(String userId);
 
 }

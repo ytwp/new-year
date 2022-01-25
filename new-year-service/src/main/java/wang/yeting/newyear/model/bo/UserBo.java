@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Accessors(chain = true)
 public class UserBo implements Serializable {
 
-    private Long userId;
+    private String userId;
     private String openId;
     private String unionId;
     private String sessionKey;

@@ -17,7 +17,7 @@ import java.io.Serializable;
 @Accessors(chain = true)
 public class UserVo implements Serializable {
 
-    private Long userId;
+    private String userId;
     private String openId;
     private String unionId;
     private String sessionKey;
