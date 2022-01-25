@@ -14,26 +14,24 @@
 				"navigationStyle": "custom",
 				"disableScroll": true
 			}
+		}, {
+			"path": "pages/share/shoushi",
+			"style": {
+				"navigationStyle": "custom",
+				"enablePullDownRefresh": false,
+				"disableScroll": true
+			}
+
+		}, {
+			"path": "pages/share/home",
+			"style": {
+				"navigationStyle": "custom",
+				"enablePullDownRefresh": false,
+				"disableScroll": true
+			}
+
 		}
-	    ,{
-            "path" : "pages/share/shoushi",
-            "style" :                                                                                    
-            {
-                "navigationStyle": "custom",
-                "enablePullDownRefresh": false
-            }
-            
-        }
-        ,{
-            "path" : "pages/share/home",
-            "style" :                                                                                    
-            {
-                "navigationStyle": "custom",
-                "enablePullDownRefresh": false
-            }
-            
-        }
-    ],
+	],
 	// "preloadRule": {
 	// 	"pages/example/components": {
 	// 		"network": "all",
