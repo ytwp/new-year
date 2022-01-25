@@ -38,8 +38,8 @@ public class RedPacketController {
     @Permission
     @PostMapping("/queryPay")
     public Result<?> exist(@CurrentUser UserBo user, @RequestBody RedPacketVo redPacketVo) {
-//        return redPacketService.queryPay(user, redPacketVo);
-        return Result.success(false);
+        return redPacketService.queryPay(user, redPacketVo);
+//        return Result.success(false);
     }
 
     @Permission

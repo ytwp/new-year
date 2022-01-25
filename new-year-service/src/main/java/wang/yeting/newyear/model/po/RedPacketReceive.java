@@ -11,7 +11,7 @@ import lombok.experimental.Accessors;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Map;
 
 /**
  * @author : weipeng
@@ -24,26 +24,29 @@ public class RedPacketReceive implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @TableId(value = "red_packet_receive_id", type = IdType.ASSIGN_ID)
-    private Long redPacketReceiveId;
+    private String redPacketReceiveId;
 
-    private Long userId;
+    private String userId;
+    private String openId;
+    private String redPacketId;
+
     private String nickName;
-    private Integer num;
-    private Long totalFee;
-    private Integer redPacketType;
-    private Integer receivingMethod;
-    private String redPacketBlessing;
-    private String outTradeNo;
-    private String transactionId;
+    private String avatarUrl;
+    private Integer feeIndex;
+    private Integer fee;
 
+    private String partnerTradeNo;
+    private String paymentNo;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime paymentTime;
     @TableField(typeHandler = JacksonTypeHandler.class)
-    private List<Long> redPacketFeeList;
+    private Map<String, String> transferResultJson;
 
     /**
-     * 10 支付成功
-     * 0 未支付
-     * -10 已领完
-     * -5 已退钱
+     * 10 付款成功
+     * 0 待付款
+     * -10 异常
+     * -5 付款失败
      */
     private Integer status;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

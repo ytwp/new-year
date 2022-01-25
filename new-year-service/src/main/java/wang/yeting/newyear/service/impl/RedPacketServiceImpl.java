@@ -16,9 +16,12 @@ import org.springframework.stereotype.Service;
 import wang.yeting.newyear.mapper.RedPacketMapper;
 import wang.yeting.newyear.model.Result;
 import wang.yeting.newyear.model.bo.UserBo;
+import wang.yeting.newyear.model.dto.RedPacketReceiveDto;
 import wang.yeting.newyear.model.dto.RedPacketShareDto;
 import wang.yeting.newyear.model.po.RedPacket;
+import wang.yeting.newyear.model.po.RedPacketReceive;
 import wang.yeting.newyear.model.vo.RedPacketVo;
+import wang.yeting.newyear.service.RedPacketReceiveService;
 import wang.yeting.newyear.service.RedPacketService;
 import wang.yeting.newyear.service.WeChatPayService;
 import wang.yeting.newyear.util.CopyBeanUtils;
@@ -28,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @author : weipeng
@@ -41,6 +45,8 @@ public class RedPacketServiceImpl extends ServiceImpl<RedPacketMapper, RedPacket
     private WeChatPayService weChatPayService;
     @Autowired
     private RedissonClient redissonClient;
+    @Autowired
+    private RedPacketReceiveService redPacketReceiveService;
 
     /**
      * 发红包
@@ -85,15 +91,17 @@ public class RedPacketServiceImpl extends ServiceImpl<RedPacketMapper, RedPacket
          */
         if (redPacketType.equals(1)) {
             BigDecimal roundTotalFee = NumberUtil.round(fee, 0);
-            redPacket.setTotalFee(roundTotalFee.longValue());
-            List<Long> redPacketFeeList = doubleMeanMethod(redPacket.getTotalFee(), redPacketVo.getNum());
+            redPacket.setTotalFee(roundTotalFee.intValue());
+            redPacket.setPayTotalFee(NumberUtil.mul(roundTotalFee, 1.03).intValue());
+            List<Integer> redPacketFeeList = doubleMeanMethod(redPacket.getTotalFee(), redPacketVo.getNum());
             redPacket.setRedPacketFeeList(redPacketFeeList);
         } else if (redPacketType.equals(2)) {
             double totalFee = NumberUtil.mul(fee, redPacketVo.getNum().longValue());
             BigDecimal roundTotalFee = NumberUtil.round(totalFee, 0);
-            redPacket.setTotalFee(roundTotalFee.longValue());
-            List<Long> redPacketFeeList = new ArrayList<>();
-            long roundFee = NumberUtil.round(fee, 0).longValue();
+            redPacket.setTotalFee(roundTotalFee.intValue());
+            redPacket.setPayTotalFee(NumberUtil.mul(roundTotalFee, 1.03).intValue());
+            List<Integer> redPacketFeeList = new ArrayList<>();
+            int roundFee = NumberUtil.round(fee, 0).intValue();
             for (int i = 0; i < redPacketVo.getNum(); i++) {
                 redPacketFeeList.add(roundFee);
             }
@@ -122,15 +130,111 @@ public class RedPacketServiceImpl extends ServiceImpl<RedPacketMapper, RedPacket
         if (StringUtils.isBlank(redPacketId) || StringUtils.isBlank(redPacketUserId)) {
             return Result.parameterError();
         }
+        RedPacketReceiveDto redPacketReceiveDto = new RedPacketReceiveDto();
+        redPacketReceiveDto.setRedPacketId(redPacketId);
         // 分布式锁
-        RLock lock = redissonClient.getLock("RedPacket:receive");
+        RLock lock = redissonClient.getLock("RedPacket:receive:" + redPacketId);
         lock.lock();
-        //查询红包
-
-        //发钱
-
-        lock.unlock();
-        return null;
+        try {
+            //查询红包
+            RedPacket redPacket = getOne(new LambdaQueryWrapper<RedPacket>()
+                    .eq(RedPacket::getRedPacketId, redPacketId)
+                    .eq(RedPacket::getUserId, redPacketUserId)
+            );
+            if (redPacket != null) {
+                if (redPacket.getStatus().equals(10)) {
+                    List<RedPacketReceive> redPacketReceiveList = redPacketReceiveService.list(new LambdaQueryWrapper<RedPacketReceive>()
+                            .eq(RedPacketReceive::getRedPacketId, redPacketId)
+                    );
+                    if (redPacket.getNum() == redPacketReceiveList.size()) {
+                        redPacketReceiveDto.setStatus(false);
+                        redPacketReceiveDto.setSendMoneyStatus(false);
+                        redPacketReceiveDto.setMessage("来晚了，红包已被领完～");
+                        redPacketReceiveDto.setButtonContext("我也发一个～");
+                    } else {
+                        List<RedPacketReceive> receivedList = redPacketReceiveList.stream().filter(redPacketReceive -> redPacketReceive.getUserId().equals(user.getUserId())).collect(Collectors.toList());
+                        if (receivedList.size() > 0) {
+                            redPacketReceiveDto.setStatus(false);
+                            redPacketReceiveDto.setSendMoneyStatus(false);
+                            redPacketReceiveDto.setMessage("已经红包了哦～");
+                            redPacketReceiveDto.setButtonContext("我也发一个～");
+                        } else {
+                            //发钱
+                            int index = redPacketReceiveList.size();
+                            Integer fee = redPacket.getRedPacketFeeList().get(index);
+                            RedPacketReceive redPacketReceive = new RedPacketReceive()
+                                    .setRedPacketId(redPacket.getRedPacketId())
+                                    .setUserId(user.getUserId())
+                                    .setNickName(user.getNickName())
+                                    .setAvatarUrl(user.getAvatarUrl())
+                                    .setOpenId(user.getOpenId())
+                                    .setFeeIndex(index)
+                                    .setFee(fee)
+                                    .setPartnerTradeNo(WxPayKit.generateStr())
+                                    .setStatus(0);
+                            boolean saveReceive = redPacketReceiveService.save(redPacketReceive);
+                            if (saveReceive) {
+                                log.warn("发钱: {}", JSONUtil.toJsonStr(redPacketReceive));
+                                Boolean transfers = weChatPayService.transfers(redPacketReceive);
+                                boolean updateReceive = redPacketReceiveService.updateById(redPacketReceive);
+                                if (transfers) {
+                                    if (updateReceive) {
+                                        //全部成功
+                                        log.warn("发钱成功: {}", JSONUtil.toJsonStr(redPacketReceive));
+                                    } else {
+                                        log.error("警告，发钱成功，更新失败: {}", JSONUtil.toJsonStr(redPacketReceive));
+                                    }
+                                    redPacketReceiveDto.setStatus(true);
+                                    redPacketReceiveDto.setSendMoneyStatus(true);
+                                    redPacketReceiveDto.setMessage("¥ " + (redPacketReceive.getFee() / 100) + " 领取成功,已存入微信钱包");
+                                    redPacketReceiveDto.setButtonContext("我也发一个～");
+                                } else {
+                                    log.error("发钱失败: {}", JSONUtil.toJsonStr(redPacketReceive));
+                                    if (!updateReceive) {
+                                        log.error("警告，发钱失败，更新失败: {}", JSONUtil.toJsonStr(redPacketReceive));
+                                    }
+                                    redPacketReceiveDto.setStatus(true);
+                                    redPacketReceiveDto.setSendMoneyStatus(false);
+                                    redPacketReceiveDto.setMessage("领取成功，转账失败，如在24小时没收到，请联系客服处理～");
+                                    redPacketReceiveDto.setButtonContext("我也发一个～");
+                                }
+                            } else {
+                                redPacketReceiveDto.setStatus(false);
+                                redPacketReceiveDto.setSendMoneyStatus(false);
+                                redPacketReceiveDto.setMessage("领取失败，请稍后重试～");
+                                redPacketReceiveDto.setButtonMethod(-10);
+                                redPacketReceiveDto.setButtonContext("稍后重试");
+                            }
+                        }
+                    }
+                } else if (redPacket.getStatus().equals(-5) || redPacket.getStatus().equals(-10)) {
+                    redPacketReceiveDto.setStatus(false);
+                    redPacketReceiveDto.setSendMoneyStatus(false);
+                    redPacketReceiveDto.setMessage("来晚了，红包已被领完～");
+                    redPacketReceiveDto.setButtonContext("我也发一个～");
+                } else {
+                    redPacketReceiveDto.setStatus(false);
+                    redPacketReceiveDto.setSendMoneyStatus(false);
+                    redPacketReceiveDto.setMessage("红包未支付哦～");
+                    redPacketReceiveDto.setButtonContext("我也发一个～");
+                }
+            } else {
+                redPacketReceiveDto.setStatus(false);
+                redPacketReceiveDto.setSendMoneyStatus(false);
+                redPacketReceiveDto.setMessage("红包不正常哦～");
+                redPacketReceiveDto.setButtonContext("我也发一个～");
+            }
+        } catch (Exception e) {
+            log.error("领红包失败：{}", JSONUtil.toJsonStr(redPacketVo), e);
+            redPacketReceiveDto.setStatus(false);
+            redPacketReceiveDto.setSendMoneyStatus(false);
+            redPacketReceiveDto.setMessage("领取失败，请稍后重试～");
+            redPacketReceiveDto.setButtonMethod(-10);
+            redPacketReceiveDto.setButtonContext("稍后重试");
+        } finally {
+            lock.unlock();
+        }
+        return Result.success(redPacketReceiveDto);
     }
 
     @Override
@@ -173,7 +277,7 @@ public class RedPacketServiceImpl extends ServiceImpl<RedPacketMapper, RedPacket
     public Result<?> shareGet(RedPacketVo redPacketVo) {
         RedPacket redPacket = getOne(
                 new LambdaQueryWrapper<RedPacket>()
-                        .eq(RedPacket::getUserId, Long.parseLong(redPacketVo.getUserId()))
+                        .eq(RedPacket::getUserId, redPacketVo.getUserId())
                         .eq(RedPacket::getRedPacketId, redPacketVo.getRedPacketId())
         );
         RedPacketShareDto redPacketShareDto = CopyBeanUtils.copyProperties(redPacket, RedPacketShareDto.class);
@@ -199,7 +303,7 @@ public class RedPacketServiceImpl extends ServiceImpl<RedPacketMapper, RedPacket
      */
     public Boolean lockUpdate(RedPacket redPacket, LambdaQueryWrapper<RedPacket> wrapper) {
         // 分布式锁
-        RLock lock = redissonClient.getLock("RedPacket:update");
+        RLock lock = redissonClient.getLock("RedPacket:update:" + redPacket.getRedPacketId());
         lock.lock();
         boolean update = update(redPacket, wrapper);
         log.warn("红包修改结果：{} ，修改详情：{}", update, JSONUtil.toJsonStr(redPacket));
@@ -208,29 +312,36 @@ public class RedPacketServiceImpl extends ServiceImpl<RedPacketMapper, RedPacket
     }
 
     public static void main(String[] args) {
-        doubleMeanMethod(100000, 24);
-        doubleMeanMethod(8231, 24);
-        doubleMeanMethod(32120, 555);
-        doubleMeanMethod(1123, 6);
+//        doubleMeanMethod(100000, 24);
+//        doubleMeanMethod(8231, 24);
+//        doubleMeanMethod(180, 6);
+//        doubleMeanMethod(310, 10);
+        doubleMeanMethod(190, 3);
+//        double totalFee = NumberUtil.mul(100, 1);
+//        BigDecimal roundTotalFee = NumberUtil.round(totalFee, 0);
+//        System.out.println(roundTotalFee.longValue());
+//        System.out.println(NumberUtil.mul(roundTotalFee, 1.03).longValue());
     }
 
     /**
-     * 拼手气红包算法
-     * 二倍均值算法（公平版）
+     * 拼手气红包
+     * 二倍均值+最小金额 算法（公平版）
      *
      * @param totalFee 红包总金额(分)
      * @param size     领取人数
      */
-    public static List<Long> doubleMeanMethod(long totalFee, int size) {
-        List<Long> result = new ArrayList<>();
+    public static List<Integer> doubleMeanMethod(int totalFee, int size) {
+        List<Integer> result = new ArrayList<>();
         if (totalFee < 0 && size < 1) {
             return Collections.emptyList();
         }
-        long amount, sum = 0;
+        int minFee = 30;
+        int amount, sum = 0;
         int remainingNumber = size;
         int i = 1;
         while (remainingNumber > 1) {
-            amount = RandomUtils.nextLong(1, 2 * (totalFee / remainingNumber));
+            int maxFee = Math.min(2 * (totalFee / remainingNumber), totalFee - ((size - i + 1) * minFee) + minFee);
+            amount = RandomUtils.nextInt(minFee, maxFee);
             sum += amount;
             System.out.println("第" + i + "个人领取的红包金额为：" + amount);
             totalFee -= amount;
