@@ -1,8 +1,8 @@
 package wang.yeting.newyear.service;
 
-import wang.yeting.newyear.model.Result;
 import wang.yeting.newyear.model.bo.UserBo;
 import wang.yeting.newyear.model.po.RedPacket;
+import wang.yeting.newyear.model.po.RedPacketReceive;
 
 import java.util.Map;
 
@@ -14,9 +14,9 @@ import java.util.Map;
 
 public interface WeChatPayService {
 
-    Boolean transfers(Long withdrawId);
-
     Map<String, String> miniAppPay(UserBo user, RedPacket redPacket);
 
     String queryOrder(String transactionId, String outTradeNo);
+
+    Boolean transfers(RedPacketReceive redPacketReceive);
 }

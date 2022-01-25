@@ -6,6 +6,7 @@ import com.ijpay.core.enums.TradeType;
 import com.ijpay.core.kit.WxPayKit;
 import com.ijpay.wxpay.WxPayApi;
 import com.ijpay.wxpay.model.OrderQueryModel;
+import com.ijpay.wxpay.model.TransferModel;
 import com.ijpay.wxpay.model.UnifiedOrderModel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,10 +14,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import wang.yeting.newyear.model.bo.UserBo;
 import wang.yeting.newyear.model.po.RedPacket;
+import wang.yeting.newyear.model.po.RedPacketReceive;
 import wang.yeting.newyear.service.UserService;
 import wang.yeting.newyear.service.WeChatPayService;
 
 import java.io.InputStream;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 /**
@@ -52,7 +56,7 @@ public class WeChatPayServiceImpl implements WeChatPayService {
                 .body("粉毛生活-红包")
                 .attach("")
                 .out_trade_no(redPacket.getOutTradeNo())
-                .total_fee(redPacket.getTotalFee().toString())
+                .total_fee(redPacket.getPayTotalFee().toString())
                 .spbill_create_ip(ip)
                 .notify_url("https://baidu.com")
                 .trade_type(TradeType.JSAPI.getTradeType())
@@ -105,10 +109,12 @@ public class WeChatPayServiceImpl implements WeChatPayService {
             Map<String, String> result = WxPayKit.xmlToMap(query);
             log.info("查询结果: {}", JSONUtil.toJsonStr(result));
             //交易成功判断条件： return_code、result_code、trade_state 都为SUCCESS
-            boolean res = "SUCCESS".equals(result.get("return_code"))
-                    && "SUCCESS".equals(result.get("result_code"))
-                    && "SUCCESS".equals(result.get("trade_state"));
-            return result.get("transaction_id");
+            boolean res = WxPayKit.codeIsOk(result.get("return_code"))
+                    && WxPayKit.codeIsOk(result.get("result_code"))
+                    && WxPayKit.codeIsOk(result.get("trade_state"));
+            if (res) {
+                return result.get("transaction_id");
+            }
         } catch (Exception e) {
             log.error("查询订单支付信息错误", e);
         }
@@ -119,40 +125,41 @@ public class WeChatPayServiceImpl implements WeChatPayService {
      * 企业付款到零钱
      */
     @Override
-    public Boolean transfers(Long withdrawId) {
+    public Boolean transfers(RedPacketReceive redPacketReceive) {
+        String ip = "127.0.0.1";
         InputStream cert = this.getClass().getClassLoader().getResourceAsStream("apiclient_cert.p12");
-//        Withdraw withdraw = withdrawService.get(withdrawId);
-//        User user = userService.getById(withdraw.getUserId());
-//        Map<String, String> params = new HashMap<>();
-//        params.put("mch_appid", appid);
-//        params.put("mchid", mch_id);
-//        String nonceStr = System.currentTimeMillis() + RandomCodeUtil.genNumStrByLen(5);
-//        params.put("nonce_str", nonceStr);
-//        String partnerTradeNo = System.currentTimeMillis() + RandomCodeUtil.genNumStrByLen(5);
-//        withdraw.setWithdrawOrderId(partnerTradeNo);
-//        params.put("partner_trade_no", partnerTradeNo);
-//        params.put("openid", user.getWxOpenId());
-//        params.put("check_name", "NO_CHECK");
-//        params.put("amount", withdraw.getWithdrawRewardFee().toString());
-//        params.put("desc", withdraw.getTitle());
-//        String ip = "127.0.0.1";
-//        params.put("spbill_create_ip", ip);
-//        params.put("sign", WxPayKit.createSign(params, partnerKey, null));
-//        // 提现
-//        String transfers = WxPayApi.transfers(params, cert, mch_id);
-//        Map<String, String> map = WxPayKit.xmlToMap(transfers);
-//        String return_code = map.get("return_code");
-//        String result_code;
-//        if (("SUCCESS").equals(return_code)) {
-//            result_code = map.get("result_code");
-//            if (("SUCCESS").equals(result_code)) {
-//                //提现成功
-//                withdraw.setStatus(Withdraw.STATUS_ONLINE);
-//                return withdrawService.update(withdraw);
-//            }
-//        }
-        //提现失败
-        return false;
+        Map<String, String> params = TransferModel.builder()
+                .mch_appid(appid)
+                .mchid(mchId)
+                .nonce_str(WxPayKit.generateStr())
+                .partner_trade_no(redPacketReceive.getPartnerTradeNo())
+                .openid(redPacketReceive.getOpenId())
+                .check_name("NO_CHECK")
+                .amount(redPacketReceive.getFee().toString())
+                .desc("红包：" + redPacketReceive.getUserId() + "_" + redPacketReceive.getRedPacketId() + "_" + redPacketReceive.getFeeIndex())
+                .spbill_create_ip(ip)
+                .build()
+                .createSign(partnerKey, SignType.MD5, false);
+        // 提现
+        String transfers = WxPayApi.transfers(params, cert, mchId);
+        log.info("提现结果:" + transfers);
+        Map<String, String> map = WxPayKit.xmlToMap(transfers);
+        String returnCode = map.get("return_code");
+        String resultCode = map.get("result_code");
+        if (WxPayKit.codeIsOk(returnCode) && WxPayKit.codeIsOk(resultCode)) {
+            // 提现成功
+            redPacketReceive.setPaymentNo(map.get("payment_no"));
+            DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            redPacketReceive.setPaymentTime(LocalDateTime.parse(map.get("payment_time"), dateTimeFormatter));
+            redPacketReceive.setTransferResultJson(map);
+            redPacketReceive.setStatus(10);
+            return true;
+        } else {
+            // 提现失败
+            redPacketReceive.setTransferResultJson(map);
+            redPacketReceive.setStatus(-5);
+            return false;
+        }
     }
 
     /**
