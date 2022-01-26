@@ -191,7 +191,7 @@ public class RedPacketServiceImpl extends ServiceImpl<RedPacketMapper, RedPacket
                                     }
                                     redPacketReceiveDto.setStatus(true);
                                     redPacketReceiveDto.setSendMoneyStatus(true);
-                                    redPacketReceiveDto.setMessage("¥ " + (NumberUtil.div("110", "100").setScale(2, RoundingMode.HALF_UP)) + " 领取成功,已存入微信钱包");
+                                    redPacketReceiveDto.setMessage("¥ " + (NumberUtil.div(redPacketReceive.getFee().toString(), "100").setScale(2, RoundingMode.HALF_UP)) + " 领取成功,已存入微信钱包");
                                     redPacketReceiveDto.setButtonContext("我也发一个～");
                                 } else {
                                     log.error("发钱失败: {}", JSONUtil.toJsonStr(redPacketReceive));

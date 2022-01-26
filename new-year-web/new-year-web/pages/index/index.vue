@@ -185,7 +185,7 @@
 					return {
 						title: this.currentRedPacket.nickName + " 发来一个 " + receivingMethod,
 						path: path + "?userId=" + this.userInfo.userId + "&redPacketId=" + this.currentRedPacketId,
-						imageUrl: 'https://img.yeting.wang/new_year/hhu.png'
+						imageUrl: 'https://img.yeting.wang/new_year/share.png'
 					}
 				} else {
 					let receivingMethod = ''
@@ -199,14 +199,14 @@
 					return {
 						title: dataset.nickname + " 发来一个 " + receivingMethod,
 						path: path + "?userId=" + this.userInfo.userId + "&redPacketId=" + dataset.redpacketid,
-						imageUrl: 'https://img.yeting.wang/new_year/hhu.png'
+						imageUrl: 'https://img.yeting.wang/new_year/share.png'
 					}
 				}
 			} else {
 				return {
 					title: '花样拜年红包，快来体验一下',
 					path: '/page/index/index',
-					imageUrl: 'https://img.yeting.wang/new_year/hhu.png'
+					imageUrl: 'https://img.yeting.wang/new_year/share.png'
 				}
 			}
 		},
