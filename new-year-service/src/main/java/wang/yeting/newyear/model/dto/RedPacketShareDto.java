@@ -17,6 +17,7 @@ public class RedPacketShareDto {
     private String redPacketId;
     private String userId;
     private String nickName;
+    private String avatarUrl;
     private Integer redPacketType;
     private Integer receivingMethod;
     private String redPacketBlessing;

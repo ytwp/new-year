@@ -20,13 +20,16 @@ import wang.yeting.newyear.model.dto.RedPacketReceiveDto;
 import wang.yeting.newyear.model.dto.RedPacketShareDto;
 import wang.yeting.newyear.model.po.RedPacket;
 import wang.yeting.newyear.model.po.RedPacketReceive;
+import wang.yeting.newyear.model.po.User;
 import wang.yeting.newyear.model.vo.RedPacketVo;
 import wang.yeting.newyear.service.RedPacketReceiveService;
 import wang.yeting.newyear.service.RedPacketService;
+import wang.yeting.newyear.service.UserService;
 import wang.yeting.newyear.service.WeChatPayService;
 import wang.yeting.newyear.util.CopyBeanUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -47,6 +50,8 @@ public class RedPacketServiceImpl extends ServiceImpl<RedPacketMapper, RedPacket
     private RedissonClient redissonClient;
     @Autowired
     private RedPacketReceiveService redPacketReceiveService;
+    @Autowired
+    private UserService userService;
 
     /**
      * 发红包
@@ -186,7 +191,7 @@ public class RedPacketServiceImpl extends ServiceImpl<RedPacketMapper, RedPacket
                                     }
                                     redPacketReceiveDto.setStatus(true);
                                     redPacketReceiveDto.setSendMoneyStatus(true);
-                                    redPacketReceiveDto.setMessage("¥ " + (redPacketReceive.getFee() / 100) + " 领取成功,已存入微信钱包");
+                                    redPacketReceiveDto.setMessage("¥ " + (NumberUtil.div("110", "100").setScale(2, RoundingMode.HALF_UP)) + " 领取成功,已存入微信钱包");
                                     redPacketReceiveDto.setButtonContext("我也发一个～");
                                 } else {
                                     log.error("发钱失败: {}", JSONUtil.toJsonStr(redPacketReceive));
@@ -280,7 +285,9 @@ public class RedPacketServiceImpl extends ServiceImpl<RedPacketMapper, RedPacket
                         .eq(RedPacket::getUserId, redPacketVo.getUserId())
                         .eq(RedPacket::getRedPacketId, redPacketVo.getRedPacketId())
         );
+        User user = userService.getByUserId(redPacket.getUserId());
         RedPacketShareDto redPacketShareDto = CopyBeanUtils.copyProperties(redPacket, RedPacketShareDto.class);
+        redPacketShareDto.setAvatarUrl(user.getAvatarUrl());
         return Result.success(redPacketShareDto);
     }
 
@@ -312,11 +319,12 @@ public class RedPacketServiceImpl extends ServiceImpl<RedPacketMapper, RedPacket
     }
 
     public static void main(String[] args) {
+        System.out.println("¥ " + (NumberUtil.div("110", "100").setScale(2, RoundingMode.HALF_UP)) + " 领取成功,已存入微信钱包");
 //        doubleMeanMethod(100000, 24);
 //        doubleMeanMethod(8231, 24);
 //        doubleMeanMethod(180, 6);
 //        doubleMeanMethod(310, 10);
-        doubleMeanMethod(190, 3);
+//        doubleMeanMethod(190, 3);
 //        double totalFee = NumberUtil.mul(100, 1);
 //        BigDecimal roundTotalFee = NumberUtil.round(totalFee, 0);
 //        System.out.println(roundTotalFee.longValue());
