@@ -11,7 +11,7 @@
 				<view style="margin-top: 510rpx;z-index: 200;padding-left:60rpx ;padding-right: 80rpx;">
 					<view style="display:flex;">
 						<u-avatar size="30" shape="circle"
-							src="https://img.yeting.wang/new_year/hhu.png?x-oss-process=style/yasuo-30"></u-avatar>
+							:src="redPacket.avatarUrl"></u-avatar>
 						<view style="margin-left: 15rpx;"></view>
 						<view style="width: 360rpx; margin-top: 7rpx;">
 							<u--text lines="1" color="#FFFFFF"
