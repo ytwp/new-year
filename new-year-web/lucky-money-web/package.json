@@ -1,0 +1,16 @@
+{
+	"id": "粉猫生活",
+	"scripts": {
+		"test": "eslint . --fix"
+	},
+	"name": "粉猫生活",
+	"version": "1.0.0",
+	"description": "粉猫生活,一个个性化红包小程序",
+	"keywords": ["粉猫生活", "粉猫", "生活", "红包", "拜年", "拜年红包", "姿势"],
+	"author": "夜听网络",
+	"dependencies": {},
+	"devDependencies": {
+		"eslint": "^8.2.0",
+		"eslint-config-airbnb": "^19.0.0"
+	}
+}
