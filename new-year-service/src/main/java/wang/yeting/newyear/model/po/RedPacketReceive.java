@@ -34,6 +34,7 @@ public class RedPacketReceive implements Serializable {
     private String avatarUrl;
     private Integer feeIndex;
     private Integer fee;
+    private String blessingWords;
 
     private String partnerTradeNo;
     private String paymentNo;

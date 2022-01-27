@@ -1,6 +1,9 @@
 package wang.yeting.newyear.service.impl;
 
 import cn.hutool.core.util.NumberUtil;
+import cn.hutool.http.HttpUtil;
+import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -12,6 +15,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import wang.yeting.newyear.mapper.RedPacketMapper;
 import wang.yeting.newyear.model.Result;
@@ -21,6 +25,7 @@ import wang.yeting.newyear.model.dto.RedPacketShareDto;
 import wang.yeting.newyear.model.po.RedPacket;
 import wang.yeting.newyear.model.po.RedPacketReceive;
 import wang.yeting.newyear.model.po.User;
+import wang.yeting.newyear.model.vo.RedPacketInferVo;
 import wang.yeting.newyear.model.vo.RedPacketVo;
 import wang.yeting.newyear.service.RedPacketReceiveService;
 import wang.yeting.newyear.service.RedPacketService;
@@ -52,6 +57,8 @@ public class RedPacketServiceImpl extends ServiceImpl<RedPacketMapper, RedPacket
     private RedPacketReceiveService redPacketReceiveService;
     @Autowired
     private UserService userService;
+    @Value("${infer.url}")
+    private String inferUrl;
 
     /**
      * 发红包
@@ -161,7 +168,7 @@ public class RedPacketServiceImpl extends ServiceImpl<RedPacketMapper, RedPacket
                         if (receivedList.size() > 0) {
                             redPacketReceiveDto.setStatus(false);
                             redPacketReceiveDto.setSendMoneyStatus(false);
-                            redPacketReceiveDto.setMessage("已经红包了哦～");
+                            redPacketReceiveDto.setMessage("已经领取过红包了哦～");
                             redPacketReceiveDto.setButtonContext("我也发一个～");
                         } else {
                             //发钱
@@ -176,7 +183,8 @@ public class RedPacketServiceImpl extends ServiceImpl<RedPacketMapper, RedPacket
                                     .setFeeIndex(index)
                                     .setFee(fee)
                                     .setPartnerTradeNo(WxPayKit.generateStr())
-                                    .setStatus(0);
+                                    .setStatus(0)
+                                    .setBlessingWords(redPacketVo.getBlessingWords());
                             boolean saveReceive = redPacketReceiveService.save(redPacketReceive);
                             if (saveReceive) {
                                 log.warn("发钱: {}", JSONUtil.toJsonStr(redPacketReceive));
@@ -286,8 +294,23 @@ public class RedPacketServiceImpl extends ServiceImpl<RedPacketMapper, RedPacket
                         .eq(RedPacket::getRedPacketId, redPacketVo.getRedPacketId())
         );
         User user = userService.getByUserId(redPacket.getUserId());
+        List<RedPacketReceive> redPacketReceiveList = redPacketReceiveService.list(new LambdaQueryWrapper<RedPacketReceive>()
+                .select(RedPacketReceive::getNickName, RedPacketReceive::getFee, RedPacketReceive::getUserId)
+                .eq(RedPacketReceive::getRedPacketId, redPacketVo.getRedPacketId())
+        );
+        List<String> receiveList = redPacketReceiveList.stream().map(redPacketReceive -> {
+            return redPacketReceive.getNickName() + "领取 ¥" + (NumberUtil.div(redPacketReceive.getFee().toString(), "100").setScale(2, RoundingMode.HALF_UP)) + "  元";
+        }).collect(Collectors.toList());
+        if (receiveList.size() >= redPacket.getNum()) {
+            //更新已领完
+            redPacket.setStatus(-10);
+            lockUpdate(redPacket, new LambdaQueryWrapper<RedPacket>()
+                    .eq(RedPacket::getRedPacketId, redPacket.getRedPacketId())
+                    .eq(RedPacket::getStatus, 10));
+        }
         RedPacketShareDto redPacketShareDto = CopyBeanUtils.copyProperties(redPacket, RedPacketShareDto.class);
         redPacketShareDto.setAvatarUrl(user.getAvatarUrl());
+        redPacketShareDto.setReceiveList(receiveList);
         return Result.success(redPacketShareDto);
     }
 
@@ -363,5 +386,88 @@ public class RedPacketServiceImpl extends ServiceImpl<RedPacketMapper, RedPacket
         System.out.println("验证发出的红包总金额为：" + sum);
         return result;
 
+    }
+
+    @Override
+    public Result<?> infer(UserBo userBo, RedPacketInferVo redPacketInferVo) {
+        long s = System.currentTimeMillis();
+        String post = HttpUtil.post(inferUrl + "/infer/array_buffer", JSONUtil.toJsonStr(redPacketInferVo));
+        long e = System.currentTimeMillis();
+        System.out.println("识别用时：" + (e - s));
+        JSONObject jsonObject = JSONUtil.parseObj(post);
+        if (new Integer(20000).equals(jsonObject.getInt("code"))) {
+            JSONArray dataArray = jsonObject.getJSONArray("data");
+            if (dataArray != null && dataArray.size() > 0) {
+                JSONObject data = dataArray.getJSONObject(0);
+                JSONObject left_shoulder = data.getJSONObject("left_shoulder");
+                Double left_shoulder_x = left_shoulder.getDouble("x");
+                Double left_shoulder_y = left_shoulder.getDouble("y");
+                JSONObject right_shoulder = data.getJSONObject("right_shoulder");
+                Double right_shoulder_x = right_shoulder.getDouble("x");
+                Double right_shoulder_y = right_shoulder.getDouble("y");
+                JSONObject left_elbow = data.getJSONObject("left_elbow");
+                Double left_elbow_x = left_elbow.getDouble("x");
+                Double left_elbow_y = left_elbow.getDouble("y");
+                JSONObject right_elbow = data.getJSONObject("right_elbow");
+                Double right_elbow_x = right_elbow.getDouble("x");
+                Double right_elbow_y = right_elbow.getDouble("y");
+                JSONObject left_wrist = data.getJSONObject("left_wrist");
+                Double left_wrist_x = left_wrist.getDouble("x");
+                Double left_wrist_y = left_wrist.getDouble("y");
+                JSONObject right_wrist = data.getJSONObject("right_wrist");
+                Double right_wrist_x = right_wrist.getDouble("x");
+                Double right_wrist_y = right_wrist.getDouble("y");
+                if (Math.abs(left_shoulder_y - right_shoulder_y) < 20) {
+                    if (Math.abs(left_shoulder_x - right_shoulder_x) > 70) {
+                        if (Math.abs(left_wrist_x - right_wrist_x) < 70) {
+                            if (Math.abs(left_wrist_y - right_wrist_y) < 20) {
+                                if (right_elbow_y > right_shoulder_y || left_elbow_y > left_shoulder_y) {
+                                    if (right_wrist_y < right_elbow_y || left_wrist_y < left_elbow_y) {
+                                        if ((right_wrist_x > right_elbow_x && right_wrist_x > right_shoulder_x)
+                                                || (left_wrist_x < left_elbow_x && left_wrist_x < left_shoulder_x)) {
+                                            System.out.println("姿势正确");
+                                            return receive(userBo, new RedPacketVo()
+                                                    .setRedPacketId(redPacketInferVo.getRedPacketId())
+                                                    .setUserId(redPacketInferVo.getRedPacketUserId())
+                                            );
+                                        } else {
+                                            System.out.println("手不再中间");
+                                        }
+                                    } else {
+                                        System.out.println("手大于肘子");
+                                    }
+                                } else {
+                                    System.out.println("肘子小于肩膀");
+                                }
+                            } else {
+                                System.out.println("手腕高度异常");
+                            }
+                        } else {
+                            System.out.println("手腕宽度异常");
+                        }
+                    } else {
+                        System.out.println("肩膀宽度异常");
+                    }
+                } else {
+                    System.out.println("肩膀高度异常");
+                }
+            }
+        }
+        return Result.success(new RedPacketReceiveDto()
+                .setRedPacketId(redPacketInferVo.getRedPacketId())
+                .setGestureStatus(false)
+                .setStatus(false)
+                .setMessage("未识别到拜年姿势")
+        );
+    }
+
+    @Override
+    public Result<?> meReceive(UserBo user, RedPacketVo redPacketVo) {
+        RedPacketReceive redPacketReceive = redPacketReceiveService.getOne(new LambdaQueryWrapper<RedPacketReceive>()
+                .select(RedPacketReceive::getNickName, RedPacketReceive::getFee, RedPacketReceive::getUserId)
+                .eq(RedPacketReceive::getRedPacketId, redPacketVo.getRedPacketId())
+                .eq(RedPacketReceive::getUserId, user.getUserId())
+        );
+        return Result.success(redPacketReceive != null);
     }
 }

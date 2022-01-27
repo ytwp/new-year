@@ -2,6 +2,7 @@ package wang.yeting.newyear.service;
 
 import wang.yeting.newyear.model.Result;
 import wang.yeting.newyear.model.bo.UserBo;
+import wang.yeting.newyear.model.vo.RedPacketInferVo;
 import wang.yeting.newyear.model.vo.RedPacketVo;
 
 /**
@@ -21,4 +22,8 @@ public interface RedPacketService {
     Result<?> get(UserBo user, RedPacketVo redPacketVo);
 
     Result<?> receive(UserBo user, RedPacketVo redPacketVo);
+
+    Result<?> infer(UserBo userBo, RedPacketInferVo redPacketInferVo);
+
+    Result<?> meReceive(UserBo user, RedPacketVo redPacketVo);
 }

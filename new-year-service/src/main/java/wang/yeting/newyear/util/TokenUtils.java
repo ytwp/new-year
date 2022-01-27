@@ -44,7 +44,7 @@ public class TokenUtils {
         String token = generateToken();
         UserBo userBo = CopyBeanUtils.copyProperties(user, UserBo.class);
         userBo.setToken(token);
-        redisUtils.set(TOKEN_PREFIX + token, JSONUtil.toJsonStr(userBo), 60 * 60 * 24 * 7);
+        redisUtils.set(TOKEN_PREFIX + token, JSONUtil.toJsonStr(userBo), 60 * 60 * 24 * 180);
         return token;
     }
 

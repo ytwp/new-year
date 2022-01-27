@@ -1,12 +1,14 @@
 package wang.yeting.newyear.model.vo;
 
 import lombok.Data;
+import lombok.experimental.Accessors;
 
 /**
  * @author : weipeng
  * @since : 2022-01-23 22:51
  */
 @Data
+@Accessors(chain = true)
 public class RedPacketVo {
     /**
      * nickName: '',
@@ -25,6 +27,7 @@ public class RedPacketVo {
     private Integer redPacketType;
     private Integer receivingMethod;
     private String redPacketBlessing;
+    private String blessingWords;
 
     private Integer page = 1;
     private Integer size = 10;

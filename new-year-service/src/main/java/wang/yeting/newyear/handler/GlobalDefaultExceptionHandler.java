@@ -47,7 +47,7 @@ public class GlobalDefaultExceptionHandler {
 
     @ExceptionHandler(value = Exception.class)
     public Result handlerException(Exception exception) {
-        log.error("handlerException_{}", exception.getMessage());
+        log.error("handlerException", exception);
         return Result.exceptionError(ResultCode.exception.message);
     }
 }

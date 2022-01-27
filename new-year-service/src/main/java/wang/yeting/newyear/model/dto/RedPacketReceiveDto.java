@@ -21,4 +21,5 @@ public class RedPacketReceiveDto {
     private Boolean sendMoneyStatus;
     private Integer fee;
     private Boolean status;
+    private Boolean gestureStatus = true;
 }

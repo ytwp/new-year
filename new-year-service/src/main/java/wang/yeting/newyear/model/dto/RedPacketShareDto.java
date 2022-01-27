@@ -4,6 +4,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
+import java.util.List;
+
 /**
  * @author : weipeng
  * @since : 2022-01-24 11:58
@@ -22,4 +24,6 @@ public class RedPacketShareDto {
     private Integer receivingMethod;
     private String redPacketBlessing;
     private Integer status;
+    private List<String> receiveList;
+    private Integer num;
 }
