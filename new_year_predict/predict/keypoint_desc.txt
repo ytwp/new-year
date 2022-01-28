@@ -1,0 +1,17 @@
+nose            鼻子      0
+left_eye        左眼      1
+right_eye       右眼      2
+left_ear        左耳      3
+right_ear       右耳      4
+left_shoulder   左肩      5
+right_shoulder  右肩      6
+left_elbow      左肘      7
+right_elbow     右肘      8
+left_wrist      左手腕     9
+right_wrist     右手腕     10
+left_crotch     左胯      11
+right_crotch    右胯      12
+left_knee       左膝      13
+right_knee      右膝      14
+left_ankle      左脚腕     15
+right_ankle     右脚腕     16
