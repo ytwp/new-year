@@ -34,8 +34,6 @@ KEYPOINT_SUPPORT_MODELS = {
     'HigherHRNet': 'keypoint_bottomup',
     'HRNet': 'keypoint_topdown'
 }
-print("bei jia zai le")
-
 
 # 用给定数据预测
 def predict_with_given_det(image, det_res, keypoint_detector,
@@ -175,13 +173,6 @@ topdown_keypoint_detector = KeyPoint_Detector(
     pred_config,
     keypoint_model_dir,
     device=device)
-
-
-def main():
-    img_list = ['input/111.jpg']
-    # 自上而下联合预测
-    keypoint_res = topdown_unite_predict(detector, topdown_keypoint_detector, img_list)
-    return keypoint_res
 
 
 def base64(base64_image):
